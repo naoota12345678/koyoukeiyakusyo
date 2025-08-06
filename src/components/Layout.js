@@ -54,6 +54,18 @@ function Layout() {
       setPageTitle('PDF配信管理');
     } else if (path === '/employee/documents') {
       setPageTitle('書類一覧');
+    } else if (path === '/admin/contracts') {
+      setPageTitle('雇用契約書一覧');
+    } else if (path.startsWith('/admin/contracts/')) {
+      if (path.includes('/edit')) {
+        setPageTitle('雇用契約書編集');
+      } else if (path.includes('/print')) {
+        setPageTitle('雇用契約書印刷');
+      } else if (path.includes('/new')) {
+        setPageTitle('雇用契約書作成');
+      } else {
+        setPageTitle('雇用契約書詳細');
+      }
     } else {
       setPageTitle('');
     }
