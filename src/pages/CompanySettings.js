@@ -18,10 +18,44 @@ function CompanySettings() {
     code: '', 
     name: '' 
   });
+  
+  // 雇用契約用会社設定
+  const [employmentSettings, setEmploymentSettings] = useState({
+    // 基本情報
+    ceoName: '',
+    employeeCount: 0,
+    
+    // 就業規則
+    workRegulations: {
+      storageLocation: '',
+      confirmationMethod: '書面の交付'
+    },
+    
+    // 定年制
+    retirement: {
+      hasRetirement: true,
+      retirementAge: 60,
+      hasRehire: true,
+      rehireMaxAge: 65
+    },
+    
+    // 退職
+    resignation: {
+      noticePeriod: 30,
+      procedure: '退職する30日前までに届け出ること'
+    },
+    
+    // 休日
+    holidays: {
+      regularDays: ['日曜日'],
+      irregularDays: '会社カレンダーによる',
+      flexibleScheduling: false
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('company'); // 'company' or 'departments'
+  const [activeTab, setActiveTab] = useState('company'); // 'company', 'departments', or 'employment'
 
   // 会社情報と部門データを読み込む
   useEffect(() => {
@@ -48,6 +82,19 @@ function CompanySettings() {
           setCompanyInfo(companyDocSnap.data());
         } else {
           console.log("No company document found");
+        }
+        
+        // 雇用契約用会社設定を取得
+        const employmentSettingsRef = doc(db, "companyEmploymentSettings", companyId);
+        const employmentSettingsSnap = await getDoc(employmentSettingsRef);
+        
+        if (employmentSettingsSnap.exists()) {
+          setEmploymentSettings(prev => ({
+            ...prev,
+            ...employmentSettingsSnap.data()
+          }));
+        } else {
+          console.log("No employment settings found, using defaults");
         }
         
         // 部門データを取得
@@ -164,6 +211,43 @@ function CompanySettings() {
       setError(`会社情報の保存中にエラーが発生しました: ${error.message}`);
     }
   };
+  
+  // 雇用契約用設定を保存
+  const saveEmploymentSettings = async () => {
+    try {
+      const companyId = userDetails?.companyId;
+      if (!companyId) {
+        setError("会社情報が取得できません");
+        return;
+      }
+      
+      console.log("=== 雇用契約設定保存デバッグ ===");
+      console.log("companyId:", companyId);
+      console.log("employmentSettings:", employmentSettings);
+      console.log("==========================");
+      
+      // 必須項目のチェック
+      if (!employmentSettings.ceoName) {
+        setError("代表取締役名を入力してください");
+        return;
+      }
+      
+      const employmentSettingsRef = doc(db, "companyEmploymentSettings", companyId);
+      
+      await setDoc(employmentSettingsRef, {
+        ...employmentSettings,
+        companyId: companyId,
+        updatedAt: new Date(),
+        createdAt: new Date() // 新規作成時のみ使用される
+      }, { merge: true });
+      
+      setSuccess("雇用契約設定を保存しました");
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error("雇用契約設定保存エラー:", error);
+      setError(`雇用契約設定の保存中にエラーが発生しました: ${error.message}`);
+    }
+  };
 
   // 新しい部門を追加
   const addDepartment = async () => {
@@ -264,6 +348,16 @@ function CompanySettings() {
           onClick={() => setActiveTab('departments')}
         >
           部門管理
+        </button>
+        <button
+          className={`px-4 py-2 font-medium text-sm mr-2 ${
+            activeTab === 'employment'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => setActiveTab('employment')}
+        >
+          雇用契約設定
         </button>
       </div>
       
@@ -437,6 +531,314 @@ function CompanySettings() {
               <li>部門コードは社内で一意の値を設定してください</li>
               <li>CSVからのインポート時に部門コードで紐付けが行われます</li>
               <li>部門を削除すると、所属していた従業員の部門情報が正しく表示されなくなります</li>
+            </ul>
+          </div>
+        </div>
+      )}
+      
+      {/* 雇用契約設定タブ */}
+      {activeTab === 'employment' && (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold mb-4">雇用契約書用会社設定</h2>
+          
+          <div className="space-y-8">
+            {/* 基本情報セクション */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-medium mb-4">基本情報</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    代表取締役名 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={employmentSettings.ceoName || ''}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      ceoName: e.target.value
+                    })}
+                    placeholder="例: 田中 太郎"
+                    className="w-full border rounded-md px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    従業員数
+                  </label>
+                  <input
+                    type="number"
+                    value={employmentSettings.employeeCount || ''}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      employeeCount: parseInt(e.target.value) || 0
+                    })}
+                    placeholder="例: 50"
+                    className="w-full border rounded-md px-3 py-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 就業規則セクション */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-medium mb-4">就業規則</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    就業規則の保管場所
+                  </label>
+                  <input
+                    type="text"
+                    value={employmentSettings.workRegulations?.storageLocation || ''}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      workRegulations: {
+                        ...employmentSettings.workRegulations,
+                        storageLocation: e.target.value
+                      }
+                    })}
+                    placeholder="例: 本社総務部"
+                    className="w-full border rounded-md px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    就業規則の周知方法
+                  </label>
+                  <select
+                    value={employmentSettings.workRegulations?.confirmationMethod || '書面の交付'}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      workRegulations: {
+                        ...employmentSettings.workRegulations,
+                        confirmationMethod: e.target.value
+                      }
+                    })}
+                    className="w-full border rounded-md px-3 py-2"
+                  >
+                    <option value="書面の交付">書面の交付</option>
+                    <option value="電子メールの送信">電子メールの送信</option>
+                    <option value="ホームページへの掲載">ホームページへの掲載</option>
+                    <option value="事業所への掲示">事業所への掲示</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* 定年制セクション */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-medium mb-4">定年制</h3>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="hasRetirement"
+                    checked={employmentSettings.retirement?.hasRetirement || false}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      retirement: {
+                        ...employmentSettings.retirement,
+                        hasRetirement: e.target.checked
+                      }
+                    })}
+                    className="mr-2"
+                  />
+                  <label htmlFor="hasRetirement" className="text-sm font-medium text-gray-700">
+                    定年制度あり
+                  </label>
+                </div>
+                
+                {employmentSettings.retirement?.hasRetirement && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ml-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        定年年齢
+                      </label>
+                      <input
+                        type="number"
+                        value={employmentSettings.retirement?.retirementAge || 60}
+                        onChange={(e) => setEmploymentSettings({
+                          ...employmentSettings,
+                          retirement: {
+                            ...employmentSettings.retirement,
+                            retirementAge: parseInt(e.target.value) || 60
+                          }
+                        })}
+                        className="w-full border rounded-md px-3 py-2"
+                      />
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center mb-2">
+                        <input
+                          type="checkbox"
+                          id="hasRehire"
+                          checked={employmentSettings.retirement?.hasRehire || false}
+                          onChange={(e) => setEmploymentSettings({
+                            ...employmentSettings,
+                            retirement: {
+                              ...employmentSettings.retirement,
+                              hasRehire: e.target.checked
+                            }
+                          })}
+                          className="mr-2"
+                        />
+                        <label htmlFor="hasRehire" className="text-sm font-medium text-gray-700">
+                          再雇用制度あり
+                        </label>
+                      </div>
+                      
+                      {employmentSettings.retirement?.hasRehire && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            再雇用上限年齢
+                          </label>
+                          <input
+                            type="number"
+                            value={employmentSettings.retirement?.rehireMaxAge || 65}
+                            onChange={(e) => setEmploymentSettings({
+                              ...employmentSettings,
+                              retirement: {
+                                ...employmentSettings.retirement,
+                                rehireMaxAge: parseInt(e.target.value) || 65
+                              }
+                            })}
+                            className="w-full border rounded-md px-3 py-2"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 退職セクション */}
+            <div className="border-b pb-6">
+              <h3 className="text-lg font-medium mb-4">退職</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    退職予告期間（日数）
+                  </label>
+                  <input
+                    type="number"
+                    value={employmentSettings.resignation?.noticePeriod || 30}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      resignation: {
+                        ...employmentSettings.resignation,
+                        noticePeriod: parseInt(e.target.value) || 30
+                      }
+                    })}
+                    className="w-full border rounded-md px-3 py-2"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    退職手続き
+                  </label>
+                  <input
+                    type="text"
+                    value={employmentSettings.resignation?.procedure || ''}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      resignation: {
+                        ...employmentSettings.resignation,
+                        procedure: e.target.value
+                      }
+                    })}
+                    placeholder="例: 退職する30日前までに届け出ること"
+                    className="w-full border rounded-md px-3 py-2"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 休日セクション */}
+            <div>
+              <h3 className="text-lg font-medium mb-4">休日</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    定例日
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'].map((day) => (
+                      <label key={day} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={employmentSettings.holidays?.regularDays?.includes(day) || false}
+                          onChange={(e) => {
+                            const regularDays = employmentSettings.holidays?.regularDays || [];
+                            let newRegularDays;
+                            if (e.target.checked) {
+                              newRegularDays = [...regularDays, day];
+                            } else {
+                              newRegularDays = regularDays.filter(d => d !== day);
+                            }
+                            setEmploymentSettings({
+                              ...employmentSettings,
+                              holidays: {
+                                ...employmentSettings.holidays,
+                                regularDays: newRegularDays
+                              }
+                            });
+                          }}
+                          className="mr-1"
+                        />
+                        <span className="text-sm">{day}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    非定例日
+                  </label>
+                  <input
+                    type="text"
+                    value={employmentSettings.holidays?.irregularDays || ''}
+                    onChange={(e) => setEmploymentSettings({
+                      ...employmentSettings,
+                      holidays: {
+                        ...employmentSettings.holidays,
+                        irregularDays: e.target.value
+                      }
+                    })}
+                    placeholder="例: 会社カレンダーによる"
+                    className="w-full border rounded-md px-3 py-2"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-8 flex justify-between">
+            <button
+              onClick={saveEmploymentSettings}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+            >
+              保存
+            </button>
+            
+            <div className="text-sm text-gray-500">
+              ※ これらの設定は雇用契約書作成時のデフォルト値として使用されます
+            </div>
+          </div>
+          
+          {/* 注意事項 */}
+          <div className="bg-blue-50 p-4 rounded-md mt-6 border border-blue-200">
+            <h3 className="text-sm font-medium text-blue-800 mb-2">雇用契約設定について</h3>
+            <ul className="text-xs text-blue-700 space-y-1 list-disc pl-5">
+              <li>これらの設定は新規雇用契約作成時のデフォルト値となります</li>
+              <li>個別の契約では項目ごとに設定を上書きできます</li>
+              <li>2024年4月労働基準法改正に対応した項目設定です</li>
+              <li>法改正等により項目が追加される場合があります</li>
             </ul>
           </div>
         </div>
