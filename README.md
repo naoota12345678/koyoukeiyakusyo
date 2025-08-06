@@ -1,6 +1,25 @@
-# Getting Started with Create React App
+# 雇用契約書管理システム
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 概要
+労働条件通知書・雇用契約書の作成・管理・期限通知を自動化するシステムです。
+
+## 主な機能
+- 雇用契約書の作成・管理
+- 期限切れの自動通知
+- PDF出力（労働条件通知書/雇用契約書選択可能）
+- CSV一括インポート
+- 2024年4月労働基準法改正対応
+
+## 技術スタック
+- React.js
+- Firebase (Authentication, Firestore, Functions, Storage)
+- Node.js
+
+## 基盤システム
+給与明細システムの認証・会社管理・従業員管理機能を共用しています。
+
+## 開発履歴
+詳細な設計内容は `EMPLOYMENT_CONTRACT_DESIGN_HISTORY.md` を参照してください。
 
 ## Available Scripts
 

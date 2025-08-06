@@ -30,7 +30,12 @@
       "WebFetch(domain:www.sma9.jp)",
       "Bash(diff:*)",
       "Bash(git pull:*)",
-      "Bash(gh workflow:*)"
+      "Bash(gh workflow:*)",
+      "Bash(gh run list:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(dir:*)",
+      "Bash(git remote remove:*)",
+      "Bash(git remote add:*)"
     ],
     "deny": []
   }
