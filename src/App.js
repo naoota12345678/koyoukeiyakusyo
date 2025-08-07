@@ -63,9 +63,6 @@ import DataBackup from './pages/DataBackup';
 import PdfDeliveryManagement from './pages/admin/PdfDelivery';
 import EmployeeDocuments from './pages/employee/Documents';
 
-// 雇用契約管理関連
-import ContractList from './pages/ContractList';
-import ContractDetail from './pages/ContractDetail';
 
 // エラーページ
 import NotFound from './pages/NotFound';
@@ -235,9 +232,6 @@ function App() {
               {/* PDF配信管理 */}
               <Route path="pdf-delivery" element={<PdfDeliveryManagement />} />
               
-              {/* 雇用契約管理 */}
-              <Route path="contracts" element={<ContractList />} />
-              <Route path="contracts/:id" element={<ContractDetail />} />
               
               {/* 賞与明細管理 */}
               <Route path="bonus-upload" element={<BonusCSVUpload />} />
